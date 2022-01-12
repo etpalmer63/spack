@@ -15,11 +15,12 @@ class LlvmAmdgpu(CMakePackage):
 
     homepage = "https://github.com/RadeonOpenCompute/llvm-project"
     git      = "https://github.com/RadeonOpenCompute/llvm-project.git"
-    url      = "https://github.com/RadeonOpenCompute/llvm-project/archive/rocm-4.3.0.tar.gz"
+    url      = "https://github.com/RadeonOpenCompute/llvm-project/archive/rocm-4.5.0.tar.gz"
 
     maintainers = ['srekolam', 'arjun-raj-kuppala', 'haampie']
 
     version('master', branch='amd-stg-open')
+    version('4.5.0', sha256='b71451bf26650ba06c0c5c4c7df70f13975151eaa673ef0cc77c1ab0000ccc97')
     version('4.3.1', sha256='b53c6b13be7d77dc93a7c62e4adbb414701e4e601e1af2d1e98da4ee07c9837f')
     version('4.3.0', sha256='1567d349cd3bcd2c217b3ecec2f70abccd5e9248bd2c3c9f21d4cdb44897fc87')
     version('4.2.0', sha256='751eca1d18595b565cfafa01c3cb43efb9107874865a60c80d6760ba83edb661')
@@ -34,6 +35,16 @@ class LlvmAmdgpu(CMakePackage):
     variant('build_type', default='Release', values=("Release", "Debug", "RelWithDebInfo"), description='CMake build type')
     variant('rocm-device-libs', default=True, description='Build ROCm device libs as external LLVM project instead of a standalone spack package.')
     variant('openmp', default=True, description='Enable OpenMP')
+    variant(
+        "llvm_dylib",
+        default=False,
+        description="Build LLVM shared library, containing all "
+        "components in a single shared library",
+    )
+
+    provides('libllvm@11', when='@3.5:3.8')
+    provides('libllvm@12', when='@3.9:4.2')
+    provides('libllvm@13', when='@4.3:')
 
     depends_on('cmake@3.4.3:',  type='build', when='@:3.8')
     depends_on('cmake@3.13.4:', type='build', when='@3.9.0:')
@@ -61,6 +72,7 @@ class LlvmAmdgpu(CMakePackage):
 
     # Add device libs sources so they can be an external LLVM project
     for d_version, d_shasum in [
+        ('4.5.0',  '78412fb10ceb215952b5cc722ed08fa82501b5848d599dc00744ae1bdc196f77'),
         ('4.3.1',  'a7291813168e500bfa8aaa5d1dccf5250764ddfe27535def01b51eb5021d4592'),
         ('4.3.0',  '055a67e63da6491c84cd45865500043553fb33c44d538313dd87040a6f3826f2'),
         ('4.2.0',  '34a2ac39b9bb7cfa8175cbab05d30e7f3c06aaffce99eed5f79c616d0f910f5f'),
@@ -95,9 +107,8 @@ class LlvmAmdgpu(CMakePackage):
             'clang-tools-extra',
             'compiler-rt'
         ]
-
         args = []
-        if self.spec.satisfies('@4.3.0:'):
+        if self.spec.satisfies('@4.3.0:4.5.0'):
             llvm_projects.append('libcxx')
             llvm_projects.append('libcxxabi')
 
@@ -109,12 +120,18 @@ class LlvmAmdgpu(CMakePackage):
                 self.define('LIBCXXABI_ENABLE_SHARED', 'OFF'),
                 self.define('LIBCXXABI_ENABLE_STATIC', 'ON'),
                 self.define('LIBCXXABI_INSTALL_STATIC_LIBRARY', 'OFF'),
+                self.define('LLVM_ENABLE_Z3_SOLVER', 'OFF'),
+                self.define('LLLVM_ENABLE_ZLIB', 'ON'),
+                self.define('CLANG_DEFAULT_LINKER', 'lld'),
             ]
 
         if '+openmp' in self.spec:
             llvm_projects.append('openmp')
 
         args.extend([self.define('LLVM_ENABLE_PROJECTS', ';'.join(llvm_projects))])
+
+        if self.spec.satisfies('@4.5.0:'):
+            args.extend([self.define('PACKAGE_VENDOR', 'AMD')])
 
         # Enable rocm-device-libs as a external project
         if '+rocm-device-libs' in self.spec:
@@ -123,6 +140,9 @@ class LlvmAmdgpu(CMakePackage):
                 self.define('LLVM_EXTERNAL_PROJECTS', 'device-libs'),
                 self.define('LLVM_EXTERNAL_DEVICE_LIBS_SOURCE_DIR', dir)
             ])
+
+        if '+llvm_dylib' in self.spec:
+            cmake_args.append("-DLLVM_BUILD_LLVM_DYLIB:Bool=ON")
 
         # Get the GCC prefix for LLVM.
         if self.compiler.name == "gcc":
@@ -140,3 +160,22 @@ class LlvmAmdgpu(CMakePackage):
             args.append(self.define('GCC_INSTALL_PREFIX', gcc_prefix))
 
         return args
+
+    @run_after("install")
+    def post_install(self):
+        # TODO:Enabling LLVM_ENABLE_RUNTIMES for libcxx,libcxxabi did not build.
+        # bootstraping the libcxx with the just built clang
+        if self.spec.satisfies('@4.5.0:'):
+            spec = self.spec
+            define = CMakePackage.define
+            libcxxdir = "build-bootstrapped-libcxx"
+            with working_dir(libcxxdir, create=True):
+                cmake_args = [
+                    self.stage.source_path + "/libcxx",
+                    define("CMAKE_C_COMPILER", spec.prefix.bin + "/clang"),
+                    define("CMAKE_CXX_COMPILER", spec.prefix.bin + "/clang++"),
+                    define("CMAKE_INSTALL_PREFIX", spec.prefix),
+                ]
+                cmake_args.extend(self.cmake_args())
+                cmake(*cmake_args)
+                make()
