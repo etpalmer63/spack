@@ -5,7 +5,6 @@
 
 from spack import *
 
-
 class Amrex(CMakePackage, CudaPackage, ROCmPackage):
     """AMReX is a publicly available software framework designed
     for building massively parallel block- structured adaptive
@@ -13,7 +12,8 @@ class Amrex(CMakePackage, CudaPackage, ROCmPackage):
 
     homepage = "https://amrex-codes.github.io/amrex/"
     url      = "https://github.com/AMReX-Codes/amrex/releases/download/22.01/amrex-22.01.tar.gz"
-    git      = "https://github.com/AMReX-Codes/amrex.git"
+    git      = "https://github.com/etpalmer63/amrex.git"
+    #git      = "https://github.com/AMReX-Codes/amrex.git"
 
     test_requires_compiler = True
 
@@ -21,7 +21,8 @@ class Amrex(CMakePackage, CudaPackage, ROCmPackage):
 
     maintainers = ['WeiqunZhang', 'asalmgren']
 
-    version('develop', branch='development')
+    version('develop', branch='CudaForSpackTest')
+    #version('develop', branch='development')
     version('22.01', sha256='857df5b2fa8e3010b8856b81879a5be32ba7cc2e575474256eae7ef815b8354d')
     version('21.12', sha256='439f9ebf2b440fc739a7976f3ade188ec3e1de5f51a0b151e6b8dda36fa67278')
     version('21.11', sha256='2edb72d7cf7e86340fcaceb325368560957bcd952fd34cd501bfdf038e1338a4')
@@ -282,11 +283,13 @@ class Amrex(CMakePackage, CudaPackage, ROCmPackage):
         # TODO: Remove/replace once self.spec['cmake'] is available here
         cmake_bin = self.cmake_bin(set=False)
 
+
         args = []
         args.append('-S./cache/amrex/Tests/SpackSmokeTest')
         args.append('-DAMReX_ROOT=' + self.prefix)
         args.append('-DMPI_C_COMPILER=' + self.spec['mpi'].mpicc)
         args.append('-DMPI_CXX_COMPILER=' + self.spec['mpi'].mpicxx)
+        args.append('-DCMAKE_CUDA_COMPILER=' + self.spec['cuda'].prefix.bin + '/nvcc')
         args.extend(self.cmake_args())
         self.run_test(cmake_bin,
                       args,
