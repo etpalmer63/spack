@@ -115,7 +115,10 @@ class Amrex(CMakePackage, CudaPackage, ROCmPackage):
     depends_on('hypre@2.19.0:', type='link', when='@21.03: ~cuda +hypre')
     depends_on('hypre@2.20.0:', type='link', when='@21.03: +cuda +hypre')
     depends_on('petsc', type='link', when='+petsc')
-    #depends_on('sycl', when='+sycl')
+    #SYCL dependencies
+    depends_on('cmake@3.22:', type='build', when='+sycl') #I think this can be removed -- but not sure which version sycl needs.
+    #depends_on('intel-oneapi-compilers', when='+sycl')
+    depends_on('intel-mkl', type=('build', 'test', 'run'), when='+sycl') #I think this can be removed
 
     # these versions of gcc have lambda function issues
     # see https://github.com/spack/spack/issues/22310
@@ -177,30 +180,30 @@ class Amrex(CMakePackage, CudaPackage, ROCmPackage):
     @when('@20.12:,develop')
     def cmake_args(self):
         args = [
-            #'-DUSE_XSDK_DEFAULTS=ON',
-            '-DAMReX_GPU_BACKEND=SYCL',
-            '-DAMReX_PROBINIT=NO',
-            '-DCMAKE_CXX_FLAGS=-I/soft/restricted/CNDA/sdk/2022.01.30.001/oneapi/mkl/2022.0.0-prerelease/include/oneapi/mkl/rng',
-            #self.define_from_variant('AMReX_SPACEDIM', 'dimensions'),
-            #self.define_from_variant('BUILD_SHARED_LIBS', 'shared'),
+            '-DUSE_XSDK_DEFAULTS=ON',
+            #'-DAMReX_GPU_BACKEND=SYCL', #SYCL HACK -- start
+            #'-DAMReX_INTEL_ARCH=Gen9',
+            #'-DAMReX_PROBINIT=NO',
+            #'-DCMAKE_CXX_FLAGS=-I/soft/restricted/CNDA/sdk/2022.01.30.001/oneapi/mkl/2022.0.0-prerelease/include', #SYCL HACK -- end
+            self.define_from_variant('AMReX_SPACEDIM', 'dimensions'),
+            self.define_from_variant('BUILD_SHARED_LIBS', 'shared'),
             self.define_from_variant('AMReX_MPI', 'mpi'),
-            #self.define_from_variant('AMReX_OMP', 'openmp'),
-            #'-DXSDK_PRECISION:STRING=%s' %
-            #self.spec.variants['precision'].value.upper(),
-            #self.define_from_variant('XSDK_ENABLE_Fortran', 'fortran'),
-            #self.define_from_variant('AMReX_FORTRAN_INTERFACES', 'fortran'),
-            #self.define_from_variant('AMReX_EB', 'eb'),
-            #self.define_from_variant('AMReX_LINEAR_SOLVERS',
-            #                         'linear_solvers'),
-            #self.define_from_variant('AMReX_AMRDATA', 'amrdata'),
-            #self.define_from_variant('AMReX_PARTICLES', 'particles'),
-            #self.define_from_variant('AMReX_PLOTFILE_TOOLS', 'plotfile_tools'),
-            #self.define_from_variant('AMReX_TINY_PROFILE', 'tiny_profile'),
-            #self.define_from_variant('AMReX_HDF5', 'hdf5'),
-            #self.define_from_variant('AMReX_HYPRE', 'hypre'),
-            #self.define_from_variant('AMReX_PETSC', 'petsc'),
-            #self.define_from_variant('AMReX_SUNDIALS', 'sundials'),
-            #self.define_from_variant('AMReX_PIC', 'pic'),
+            self.define_from_variant('AMReX_OMP', 'openmp'),
+            '-DXSDK_PRECISION:STRING=%s' %
+            self.spec.variants['precision'].value.upper(),
+            self.define_from_variant('XSDK_ENABLE_Fortran', 'fortran'),
+            self.define_from_variant('AMReX_FORTRAN_INTERFACES', 'fortran'),
+            self.define_from_variant('AMReX_EB', 'eb'),
+            self.define_from_variant('AMReX_LINEAR_SOLVERS', 'linear_solvers'),
+            self.define_from_variant('AMReX_AMRDATA', 'amrdata'),
+            self.define_from_variant('AMReX_PARTICLES', 'particles'),
+            self.define_from_variant('AMReX_PLOTFILE_TOOLS', 'plotfile_tools'),
+            self.define_from_variant('AMReX_TINY_PROFILE', 'tiny_profile'),
+            self.define_from_variant('AMReX_HDF5', 'hdf5'),
+            self.define_from_variant('AMReX_HYPRE', 'hypre'),
+            self.define_from_variant('AMReX_PETSC', 'petsc'),
+            self.define_from_variant('AMReX_SUNDIALS', 'sundials'),
+            self.define_from_variant('AMReX_PIC', 'pic'),
         ]
 
         if self.spec.satisfies('%fj'):
@@ -219,11 +222,14 @@ class Amrex(CMakePackage, CudaPackage, ROCmPackage):
             targets = self.spec.variants['amdgpu_target'].value
             args.append('-DAMReX_AMD_ARCH=' + ';'.join(str(x) for x in targets))
 
-        #if '+scyl' in self.spec:
-        #    #args.append('-DCMAKE_CXX_COMPILER={0}'.format(self.spec['dpcpp'].dpcpp))
-        #    args.append('-DAMReX_GPU_BACKEND=SYCL')
-        #    #targets = self.spec.variants['intel_arch'].value
-        #    #args.append('-DAMReX_INTEL_ARCH=' + ';'.join(str(x) for x in targets))
+        if '+sycl' in self.spec:
+            #args.append('-DCMAKE_CXX_COMPILER={0}'.format(self.spec['dpcpp'].dpcpp))
+            #args.append('-DCMAKE_CXX_COMPILER={0}'.format(self.spec['oneapi'].oneapi))
+            args.append('-DAMReX_GPU_BACKEND=SYCL')
+            args.append('-DAMReX_INTEL_ARCH=gen9')
+            args.append('-DCMAKE_CXX_FLAGS=-I/soft/restricted/CNDA/sdk/2022.01.30.001/oneapi/mkl/2022.0.0-prerelease/include') #SYCL HACK
+            #targets = self.spec.variants['intel_arch'].value
+            #args.append('-DAMReX_INTEL_ARCH=' + ';'.join(str(x) for x in targets))
 
         return args
 
@@ -301,9 +307,15 @@ class Amrex(CMakePackage, CudaPackage, ROCmPackage):
         args = []
         args.append('-S./cache/amrex/Tests/SpackSmokeTest')
         args.append('-DAMReX_ROOT=' + self.prefix)
-        args.append('-DAMReX_GPU_BACKEND=SYCL')
         #args.append('-DMPI_C_COMPILER=' + self.spec['mpi'].mpicc)
         #args.append('-DMPI_CXX_COMPILER=' + self.spec['mpi'].mpicxx)
+        #if '+sycl' in self.spec:
+            #args.append('-DCMAKE_CXX_COMPILER={0}'.format(self.compiler.cxx))
+            #args.append('-DAMReX_GPU_BACKEND=SYCL')
+            #args.append('-DAMReX_INTEL_ARCH=gen9')
+            #targets = self.spec.variants['intel_arch'].value
+            #args.append('-DAMReX_INTEL_ARCH=' + ';'.join(str(x) for x in targets))
+
         args.extend(self.cmake_args())
         self.run_test(cmake_bin,
                       args,
@@ -311,6 +323,8 @@ class Amrex(CMakePackage, CudaPackage, ROCmPackage):
 
         make()
 
+        #self.run_test('script_test.sh', # when calling script that runs the manually installed version
+                                         # it works. 
         self.run_test('install_test',
                       ['./cache/amrex/Tests/Amr/Advection_AmrCore/Exec/inputs-ci'],
                       ['finalized'],
