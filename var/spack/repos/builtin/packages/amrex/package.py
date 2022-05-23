@@ -13,7 +13,8 @@ class Amrex(CMakePackage, CudaPackage, ROCmPackage):
 
     homepage = "https://amrex-codes.github.io/amrex/"
     url      = "https://github.com/AMReX-Codes/amrex/releases/download/22.02/amrex-22.02.tar.gz"
-    git      = "https://github.com/AMReX-Codes/amrex.git"
+    git      = "https://github.com/etpalmer63/amrex.git"
+    #git      = "https://github.com/AMReX-Codes/amrex.git"
 
     test_requires_compiler = True
 
@@ -21,7 +22,8 @@ class Amrex(CMakePackage, CudaPackage, ROCmPackage):
 
     maintainers = ['WeiqunZhang', 'asalmgren', 'etpalmer63']
 
-    version('develop', branch='development')
+    version('develop', branch='spack_sycl_testing')
+    #version('develop', branch='development')
     version('22.02', sha256='5d8dd3fa3c416b04e70188e06b7e8fc2838d78b43a2cf33a285184c77f0c1e1e')
     version('22.01', sha256='857df5b2fa8e3010b8856b81879a5be32ba7cc2e575474256eae7ef815b8354d')
     version('21.12', sha256='439f9ebf2b440fc739a7976f3ade188ec3e1de5f51a0b151e6b8dda36fa67278')
@@ -119,6 +121,7 @@ class Amrex(CMakePackage, CudaPackage, ROCmPackage):
     depends_on('cmake@3.22:', type='build', when='+sycl') #I think this can be removed -- but not sure which version sycl needs.
     #depends_on('intel-oneapi-compilers', when='+sycl')
     depends_on('intel-mkl', type=('build', 'test', 'run'), when='+sycl') #I think this can be removed
+    depends_on('intel-oneapi-mkl', type=('build', 'test', 'run'), when='+sycl') #I think this can be removed
 
     # these versions of gcc have lambda function issues
     # see https://github.com/spack/spack/issues/22310
@@ -226,11 +229,12 @@ class Amrex(CMakePackage, CudaPackage, ROCmPackage):
             #args.append('-DCMAKE_CXX_COMPILER={0}'.format(self.spec['dpcpp'].dpcpp))
             #args.append('-DCMAKE_CXX_COMPILER={0}'.format(self.spec['oneapi'].oneapi))
             args.append('-DAMReX_GPU_BACKEND=SYCL')
-            args.append('-DAMReX_INTEL_ARCH=gen9')
-            args.append('-DCMAKE_CXX_FLAGS=-I/soft/restricted/CNDA/sdk/2022.01.30.001/oneapi/mkl/2022.0.0-prerelease/include') #SYCL HACK
+            #args.append('-DAMReX_INTEL_ARCH=gen9')
+            args.append('-DCMAKE_CXX_FLAGS=-I/soft/restricted/CNDA/sdk/2022.01.30.001/oneapi/compiler/pseudo-20220223/compiler/linux/include')
+            args.append('-DCMAKE_CXX_FLAGS=-L/soft/restricted/CNDA/sdk/2022.01.30.001/oneapi/compiler/pseudo-20220223/compiler/linux/lib')
+            #args.append('-DCMAKE_CXX_FLAGS=-I/soft/restricted/CNDA/sdk/2022.01.30.001/oneapi/mkl/2022.0.0-prerelease/include') #SYCL HACK
             #targets = self.spec.variants['intel_arch'].value
             #args.append('-DAMReX_INTEL_ARCH=' + ';'.join(str(x) for x in targets))
-
         return args
 
     #
