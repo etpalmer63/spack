@@ -184,10 +184,6 @@ class Amrex(CMakePackage, CudaPackage, ROCmPackage):
     def cmake_args(self):
         args = [
             '-DUSE_XSDK_DEFAULTS=ON',
-            #'-DAMReX_GPU_BACKEND=SYCL', #SYCL HACK -- start
-            #'-DAMReX_INTEL_ARCH=Gen9',
-            #'-DAMReX_PROBINIT=NO',
-            #'-DCMAKE_CXX_FLAGS=-I/soft/restricted/CNDA/sdk/2022.01.30.001/oneapi/mkl/2022.0.0-prerelease/include', #SYCL HACK -- end
             self.define_from_variant('AMReX_SPACEDIM', 'dimensions'),
             self.define_from_variant('BUILD_SHARED_LIBS', 'shared'),
             self.define_from_variant('AMReX_MPI', 'mpi'),
@@ -229,10 +225,9 @@ class Amrex(CMakePackage, CudaPackage, ROCmPackage):
             #args.append('-DCMAKE_CXX_COMPILER={0}'.format(self.spec['dpcpp'].dpcpp))
             #args.append('-DCMAKE_CXX_COMPILER={0}'.format(self.spec['oneapi'].oneapi))
             args.append('-DAMReX_GPU_BACKEND=SYCL')
-            #args.append('-DAMReX_INTEL_ARCH=gen9')
-            args.append('-DCMAKE_CXX_FLAGS=-I/soft/restricted/CNDA/sdk/2022.01.30.001/oneapi/compiler/pseudo-20220223/compiler/linux/include')
-            args.append('-DCMAKE_CXX_FLAGS=-L/soft/restricted/CNDA/sdk/2022.01.30.001/oneapi/compiler/pseudo-20220223/compiler/linux/lib')
-            #args.append('-DCMAKE_CXX_FLAGS=-I/soft/restricted/CNDA/sdk/2022.01.30.001/oneapi/mkl/2022.0.0-prerelease/include') #SYCL HACK
+            args.append('-DSYCL_INCLUDE_DIR=/soft/restricted/CNDA/sdk/2022.01.30.001/oneapi/compiler/pseudo-20220223/compiler/linux/include')
+            args.append('-DSYCL_LIBRARY_DIR=/soft/restricted/CNDA/sdk/2022.01.30.001/oneapi/compiler/pseudo-20220223/compiler/linux/lib')
+            args.append('-DCMAKE_CXX_FLAGS=-I/soft/restricted/CNDA/sdk/2022.01.30.001/oneapi/mkl/20220311/mkl/include')
             #targets = self.spec.variants['intel_arch'].value
             #args.append('-DAMReX_INTEL_ARCH=' + ';'.join(str(x) for x in targets))
         return args
@@ -313,13 +308,6 @@ class Amrex(CMakePackage, CudaPackage, ROCmPackage):
         args.append('-DAMReX_ROOT=' + self.prefix)
         #args.append('-DMPI_C_COMPILER=' + self.spec['mpi'].mpicc)
         #args.append('-DMPI_CXX_COMPILER=' + self.spec['mpi'].mpicxx)
-        #if '+sycl' in self.spec:
-            #args.append('-DCMAKE_CXX_COMPILER={0}'.format(self.compiler.cxx))
-            #args.append('-DAMReX_GPU_BACKEND=SYCL')
-            #args.append('-DAMReX_INTEL_ARCH=gen9')
-            #targets = self.spec.variants['intel_arch'].value
-            #args.append('-DAMReX_INTEL_ARCH=' + ';'.join(str(x) for x in targets))
-
         args.extend(self.cmake_args())
         self.run_test(cmake_bin,
                       args,
@@ -327,8 +315,6 @@ class Amrex(CMakePackage, CudaPackage, ROCmPackage):
 
         make()
 
-        #self.run_test('script_test.sh', # when calling script that runs the manually installed version
-                                         # it works. 
         self.run_test('install_test',
                       ['./cache/amrex/Tests/Amr/Advection_AmrCore/Exec/inputs-ci'],
                       ['finalized'],
