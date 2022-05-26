@@ -118,10 +118,26 @@ class Amrex(CMakePackage, CudaPackage, ROCmPackage):
     depends_on('hypre@2.20.0:', type='link', when='@21.03: +cuda +hypre')
     depends_on('petsc', type='link', when='+petsc')
     #SYCL dependencies
-    depends_on('cmake@3.22:', type='build', when='+sycl') #I think this can be removed -- but not sure which version sycl needs.
-    #depends_on('intel-oneapi-compilers', when='+sycl')
-    depends_on('intel-mkl', type=('build', 'test', 'run'), when='+sycl') #I think this can be removed
-    depends_on('intel-oneapi-mkl', type=('build', 'test', 'run'), when='+sycl') #I think this can be removed
+    depends_on('cmake@3.22:', type='build', when='+sycl') 
+    depends_on('intel-oneapi-mkl', type=('build', 'test', 'run'), when='+sycl') 
+    depends_on('intel-oneapi-compilers', type=('build', 'test', 'run'), when='+sycl')
+    depends_on('intel-oneapi-mpi', type=('build', 'test', 'run'), when='+sycl')
+    depends_on('intel-oneapi-ccl', type=('build', 'test', 'run'), when='+sycl')
+    depends_on('intel-oneapi-advisor', type=('build', 'test', 'run'), when='+sycl')
+    depends_on('intel-oneapi-dal', type=('build', 'test', 'run'), when='+sycl')
+    depends_on('intel-oneapi-dnn', type=('build', 'test', 'run'), when='+sycl')
+    depends_on('intel-oneapi-dpl', type=('build', 'test', 'run'), when='+sycl')
+    depends_on('intel-oneapi-ipp', type=('build', 'test', 'run'), when='+sycl')
+    depends_on('intel-oneapi-ippcp', type=('build', 'test', 'run'), when='+sycl')
+    depends_on('intel-oneapi-tbb', type=('build', 'test', 'run'), when='+sycl')
+    depends_on('intel-oneapi-vpl', type=('build', 'test', 'run'), when='+sycl')
+    depends_on('intel-oneapi-vtune', type=('build', 'test', 'run'), when='+sycl')
+    depends_on('intel-oneapi-inspector', type=('build', 'test', 'run'), when='+sycl')
+    #depends_on('intel-compute-runtime', type=('build', 'test', 'run'), when='+sycl')
+    #depends_on('ocl-icd', type=('build', 'test', 'run'), when='+sycl') # does not install
+
+#intel-oneapi-advisor  intel-oneapi-compilers  intel-oneapi-dnn  intel-oneapi-inspector  intel-oneapi-ippcp  intel-oneapi-mpi  intel-oneapi-vpl
+#intel-oneapi-ccl      intel-oneapi-dal        intel-oneapi-dpl  intel-oneapi-ipp        intel-oneapi-mkl    intel-oneapi-tbb  intel-oneapi-vtune
 
     # these versions of gcc have lambda function issues
     # see https://github.com/spack/spack/issues/22310
@@ -314,6 +330,27 @@ class Amrex(CMakePackage, CudaPackage, ROCmPackage):
                       purpose='Build with same CMake version as install')
 
         make()
+
+        #self.run_test('module', 
+        #              ['load intel_compute_runtime'],
+        #              [],
+        #              installed=False,
+        #              purpose='--HACKY attempt to load intel compute runtime---',
+        #              skip_missing=False)
+
+        #self.run_test('pwd',
+        #              [],
+        #              [],
+        #              installed=False,
+        #              purpose='--Check environment variables---',
+        #              skip_missing=False)
+
+        self.run_test('printenv',
+                      [],
+                      [],
+                      installed=False,
+                      purpose='--Check environment variables---',
+                      skip_missing=False)
 
         self.run_test('install_test',
                       ['./cache/amrex/Tests/Amr/Advection_AmrCore/Exec/inputs-ci'],
