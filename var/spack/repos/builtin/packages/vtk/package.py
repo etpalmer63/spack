@@ -61,7 +61,7 @@ class Vtk(CMakePackage):
     patch("xdmf2-hdf51.13.2.patch", when="@9:9.2 +xdmf")
 
     # We cannot build with both osmesa and qt in spack
-    conflicts("+osmesa", when="+qt")
+    #conflicts("+osmesa", when="+qt")
 
     with when("+python"):
         # Depend on any Python, add bounds below.

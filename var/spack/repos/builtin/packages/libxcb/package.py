@@ -50,3 +50,4 @@ class Libxcb(AutotoolsPackage):
 
     def patch(self):
         filter_file("typedef struct xcb_auth_info_t {", "typedef struct {", "src/xcb.h")
+        filter_file("python python2 python3", "python3", "configure")

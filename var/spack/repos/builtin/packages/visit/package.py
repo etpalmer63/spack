@@ -72,7 +72,7 @@ class Visit(CMakePackage):
     version("3.0.1", sha256="a506d4d83b8973829e68787d8d721199523ce7ec73e7594e93333c214c2c12bd")
 
     root_cmakelists_dir = "src"
-    generator("ninja")
+    #generator("ninja")
 
     variant("gui", default=True, description="Enable VisIt's GUI")
     variant("osmesa", default=False, description="Use OSMesa for off-screen CPU rendering")
@@ -99,7 +99,7 @@ class Visit(CMakePackage):
     patch("visit32-missing-link-libs.patch", when="@3.2")
 
     # Exactly one of 'gui' or 'osmesa' has to be enabled
-    conflicts("+gui", when="+osmesa")
+    #conflicts("+gui", when="+osmesa")
 
     depends_on("cmake@3.14.7:", type="build")
 
@@ -264,24 +264,27 @@ class Visit(CMakePackage):
         args.extend(
             [
                 self.define("VISIT_USE_X", "glx" in spec),
-                self.define("VISIT_MESAGL_DIR", "IGNORE"),
-                self.define("VISIT_OPENGL_DIR", "IGNORE"),
-                self.define("VISIT_OSMESA_DIR", "IGNORE"),
                 self.define("OpenGL_GL_PREFERENCE", "LEGACY"),
                 self.define("OPENGL_INCLUDE_DIR", spec["gl"].headers.directories[0]),
                 self.define("OPENGL_glu_LIBRARY", spec["glu"].libs[0]),
             ]
         )
         if "+osmesa" in spec:
+            args.append(self.define("VISIT_MESAGL_DIR", spec["mesa"].prefix))
+            if '+llvm' in spec['mesa']:
+                args.append(self.define('VISIT_LLVM_DIR', spec['libllvm'].prefix))
+        else:
             args.extend(
                 [
                     self.define("HAVE_OSMESA", True),
                     self.define("OSMESA_LIBRARIES", spec["osmesa"].libs[0]),
                     self.define("OPENGL_gl_LIBRARY", spec["osmesa"].libs[0]),
+                    self.define("VISIT_MESAGL_DIR", "IGNORE"),
+                    self.define("VISIT_OPENGL_DIR", "IGNORE"),
+                    self.define("VISIT_OSMESA_DIR", "IGNORE"),
+                    self.define("OPENGL_gl_LIBRARY", spec["gl"].libs[0])
                 ]
             )
-        else:
-            args.append(self.define("OPENGL_gl_LIBRARY", spec["gl"].libs[0]))
 
         if "+hdf5" in spec:
             args.append(self.define("HDF5_DIR", spec["hdf5"].prefix))
